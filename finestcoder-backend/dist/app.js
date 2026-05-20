@@ -48,6 +48,7 @@ const roles_1 = __importDefault(require("./routes/roles"));
 const users_1 = __importDefault(require("./routes/users"));
 const permissions_1 = __importDefault(require("./routes/permissions"));
 const courses_1 = __importDefault(require("./routes/courses"));
+const courseCategories_1 = __importDefault(require("./routes/courseCategories"));
 const upload_1 = __importDefault(require("./routes/upload"));
 const blogs_1 = __importDefault(require("./routes/blogs"));
 const testimonials_1 = __importDefault(require("./routes/testimonials"));
@@ -77,6 +78,7 @@ const buildApp = async () => {
     await app.register(helmet_1.default, {
         global: true,
         contentSecurityPolicy: false,
+        crossOriginResourcePolicy: false, // Allow finestapp (port 3002) to load images from backend (port 3001)
     });
     await app.register(multipart_1.default);
     await app.register(static_1.default, {
@@ -114,6 +116,9 @@ const buildApp = async () => {
     await app.register(users_1.default, { prefix: "/api" });
     await app.register(permissions_1.default, { prefix: "/api" });
     await app.register(courses_1.default, {
+        prefix: "/api",
+    });
+    await app.register(courseCategories_1.default, {
         prefix: "/api",
     });
     await app.register(blogs_1.default, {

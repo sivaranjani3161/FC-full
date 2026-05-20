@@ -1,33 +1,17 @@
- export type Role = 'admin' | 'editor' | 'viewer';
+/** @deprecated Import from `@/types/auth` instead */
+export type { AuthRole as Role, SessionUser as ExtendedUser } from './auth';
+export type {
+  Module,
+  CrudOperation,
+  ModulePermissions,
+  RolePermissions,
+} from './auth';
 
-export type Module =
-  | 'courses'
-  | 'blogs'
-  | 'gallery'
-  | 'enquiries'
-  | 'testimonials';
-
-export type CrudOperation = 'create' | 'read' | 'update' | 'delete' | 'custom';
-
-export type ModulePermissions = {
-  [key in CrudOperation]: boolean;
-};
-
-export type RolePermissions = {
-  [module in Module]: ModulePermissions;
-};
-
+/** @deprecated Legacy config shape — permissions are DB-driven via JWT */
 export type PermissionsConfig = {
-  roles: Role[];
-  modules: Module[];
-  roleRoutes: { [role in Role]: string };
-  userRoles: { [email: string]: Role };
-  permissions: { [role in Role]: RolePermissions };
+  roles: import('./auth').AuthRole[];
+  modules: import('./auth').Module[];
+  roleRoutes: Record<string, string>;
+  userRoles: Record<string, string>;
+  permissions: Record<string, import('./auth').RolePermissions>;
 };
-
-export interface ExtendedUser {
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-  role?: Role;
-}

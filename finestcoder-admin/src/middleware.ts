@@ -1,6 +1,5 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import type { Role } from "@/types/roles";
 
 // This is the new way to export middleware in Next.js 14+
 export default withAuth(

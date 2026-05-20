@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Save, X, Info, FileText, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Quote, Heading2, Heading3, Link as LinkIcon, Undo, Redo, Code, Minus } from 'lucide-react';
 import ImageUpload from '../common/ImageUpload';
+import { slugify } from '@/utils/slug';
+import type { Blog } from '@/services/blog.service';
 
 // Tiptap
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -12,13 +14,13 @@ import UnderlineExt from '@tiptap/extension-underline';
 import LinkExt from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 
-interface BlogFormProps {
-  initialData?: any;
-  existingBlogs: any[];
-  onSave: (value: any) => void;
+type BlogFormProps = {
+  initialData?: Blog;
+  existingBlogs: Blog[];
+  onSave: (value: Record<string, unknown>) => void;
   onCancel: () => void;
   loading?: boolean;
-}
+};
 
 const inp = 'w-full h-7 px-2 rounded border border-slate-200 bg-slate-50 text-[11px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#00B8C6] focus:bg-white transition-colors';
 const lbl = 'block text-[9px] font-bold uppercase tracking-wide text-slate-400 mb-0.5';
@@ -146,9 +148,6 @@ export default function BlogForm({ initialData, existingBlogs, onSave, onCancel,
 
   const relatedCandidates = existingBlogs.filter((b) => b.id !== initialData?.id);
 
-  const generateSlug = (title: string) =>
-    title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const tags = formData.tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
@@ -253,7 +252,7 @@ export default function BlogForm({ initialData, existingBlogs, onSave, onCancel,
             <div className="flex flex-col sm:hidden gap-3">
               <div>
                 <label className={lbl}>Title <span className="text-rose-400">*</span></label>
-                <input required value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value, slug: generateSlug(e.target.value) }))} placeholder="Blog title…" className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#00B8C6] focus:bg-white transition-colors" />
+                <input required value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value, slug: slugify(e.target.value) }))} placeholder="Blog title…" className="w-full h-10 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#00B8C6] focus:bg-white transition-colors" />
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
@@ -297,7 +296,7 @@ export default function BlogForm({ initialData, existingBlogs, onSave, onCancel,
               <div className="flex-1 grid grid-cols-3 gap-x-2.5 gap-y-2 min-w-0">
                 <div className="col-span-2">
                   <label className={lbl}>Title <span className="text-rose-400">*</span></label>
-                  <input required value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value, slug: generateSlug(e.target.value) }))} placeholder="Enter blog title…" className={inp} />
+                  <input required value={formData.title} onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value, slug: slugify(e.target.value) }))} placeholder="Enter blog title…" className={inp} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>

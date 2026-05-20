@@ -7,12 +7,20 @@ import * as dotenv from "dotenv";
 // Load .env explicitly for CLI usage (like migrations)
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
+const dbUser = process.env.DB_USER || "root";
+const dbPassword = process.env.DB_PASSWORD ?? "";
+if (process.env.DB_PASSWORD === undefined) {
+  console.warn(
+    "Warning: DB_PASSWORD is not set. Backend is falling back to empty password. Create finestcoder-backend/.env with DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME."
+  );
+}
+
 export const AppDataSource = new DataSource({
     type: "mysql",
     host: process.env.DB_HOST || "localhost",
     port: parseInt(process.env.DB_PORT || "3306"),
-    username: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "password",
+    username: dbUser,
+    password: dbPassword,
     database: process.env.DB_NAME || "finestapp",
     synchronize: false,
     namingStrategy: new SnakeNamingStrategy(),

@@ -4,14 +4,12 @@ import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
 import navData from "@/app/data/navbar.json";
 import type { NavbarData } from "@/app/types/navbar";
+import type { CategoryWithCourses } from "@/app/types/navbarCourses";
 import { usePathname, useRouter } from "next/navigation";
 import EnquiryModal from "@/app/components/Enquirymodel";
 
 const data = navData as NavbarData;
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
-
-interface CourseBasic { id: number; title: string; slug: string; }
-interface CategoryWithCourses { id: number; name: string; slug: string; courses: CourseBasic[]; }
 
 export default function Navbar() {
   const [open, setOpen]                         = useState(false);

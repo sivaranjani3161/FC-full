@@ -1,0 +1,9 @@
+export { blogService } from './blog.service';
+export { courseService } from './course.service';
+export { courseCategoryService } from './courseCategory.service';
+export { enquiryService } from './enquiry.service';
+export { galleryService } from './gallery.service';
+export { roleService } from './role.service';
+export { testimonialService } from './testimonial.service';
+export { uploadService } from './upload.service';
+export { userService } from './user.service';

@@ -4,16 +4,16 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Save, X } from 'lucide-react';
 import ImageUpload from '../common/ImageUpload';
+import { slugify } from '@/utils/slug';
+import type { GalleryRow, GalleryType } from '@/types/gallery';
 
-type GalleryType = 'internal' | 'external';
-
-interface Props {
+type Props = {
   type: GalleryType;
-  initialData?: any;
-  onSave: (data: any, type: GalleryType) => void;
+  initialData?: GalleryRow;
+  onSave: (data: Record<string, unknown>, type: GalleryType) => void;
   onCancel: () => void;
   loading?: boolean;
-}
+};
 
 const SIDEBAR_WIDTH = 262;
 const TOP_OFFSET    = 12;
@@ -64,9 +64,6 @@ export default function UnifiedGalleryForm({ type: initialType, initialData, onS
       });
     }
   }, [initialData, initialType]);
-
-  const generateSlug = (title: string) =>
-    title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
   const titleText = initialData
     ? (isExternal ? 'Edit Event' : 'Edit Internal Image')
@@ -200,7 +197,7 @@ export default function UnifiedGalleryForm({ type: initialType, initialData, onS
                   <input
                     required
                     value={event.title}
-                    onChange={(e) => setEvent((p) => ({ ...p, title: e.target.value, slug: generateSlug(e.target.value) }))}
+                    onChange={(e) => setEvent((p) => ({ ...p, title: e.target.value, slug: slugify(e.target.value) }))}
                     placeholder="Event title…"
                     className={inpMobile}
                   />
@@ -326,7 +323,7 @@ export default function UnifiedGalleryForm({ type: initialType, initialData, onS
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className={lbl}>Title *</label>
-                        <input required value={event.title} onChange={(e) => setEvent((p) => ({ ...p, title: e.target.value, slug: generateSlug(e.target.value) }))} placeholder="Event title…" className={inp} />
+                        <input required value={event.title} onChange={(e) => setEvent((p) => ({ ...p, title: e.target.value, slug: slugify(e.target.value) }))} placeholder="Event title…" className={inp} />
                       </div>
                       <div>
                         <label className={lbl}>Slug *</label>

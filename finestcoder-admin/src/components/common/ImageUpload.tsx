@@ -4,16 +4,8 @@ import { useState, useRef } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { resolveMediaUrl } from '@/lib/resolveMediaUrl';
-
-interface ImageUploadProps {
-  value?: string;
-  onChange: (url: string) => void;
-  label?: string;
-  className?: string;
-  compact?: boolean;
-}
-
-const API_BASE = '/api/proxy';
+import type { ImageUploadProps } from '@/types/forms';
+import { uploadService } from '@/services/upload.service';
 
 export default function ImageUpload({
   value,
@@ -30,16 +22,9 @@ export default function ImageUpload({
     if (!file) return;
     try {
       setUploading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        onChange(data.url);
-        toast.success('Image uploaded');
-      } else {
-        toast.error('Failed to upload image');
-      }
+      const data = await uploadService.uploadFile(file);
+      onChange(data.url);
+      toast.success('Image uploaded');
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Upload error');

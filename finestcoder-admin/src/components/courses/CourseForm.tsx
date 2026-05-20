@@ -6,22 +6,11 @@ import { X, Save, Info, BookOpen } from 'lucide-react';
 import NestedEntityManager from '../common/NestedEntityManager';
 import ImageUpload from '../common/ImageUpload';
 import CourseHighlightsManager from './CourseHighlightsManager';
-
-interface CourseFormProps {
-  initialData?: any;
-  onSave: (data: any) => void;
-  onCancel: () => void;
-  loading?: boolean;
-  categoryRefreshKey?: number;  // bump to trigger category re-fetch
-}
-
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-}
-
-const API_BASE = '/api/proxy';
+import { courseCategoryService } from '@/services/courseCategory.service';
+import { slugify } from '@/utils/slug';
+import type { CourseFormProps } from '@/types/forms';
+import type { CourseCategory } from '@/types/category';
+import type { NestedCourseItem } from '@/types/entities';
 
 const SIDEBAR_WIDTH = 262;
 const TOP_OFFSET    = 12;
@@ -40,7 +29,7 @@ const lbl = 'block text-[9.5px] font-bold uppercase tracking-wide text-slate-500
 export default function CourseForm({ initialData, onSave, onCancel, loading, categoryRefreshKey = 0 }: CourseFormProps) {
   const [mounted, setMounted]         = useState(false);
   const [openSection, setOpenSection] = useState<'highlights' | 'features' | 'structure' | null>('highlights');
-  const [categories, setCategories]   = useState<Category[]>([]);
+  const [categories, setCategories]   = useState<CourseCategory[]>([]);
   const [formData, setFormData] = useState(() => ({
     title:            initialData?.title            || '',
     slug:             initialData?.slug             || '',
@@ -56,9 +45,8 @@ export default function CourseForm({ initialData, onSave, onCancel, loading, cat
   useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
 
   useEffect(() => {
-    fetch(`${API_BASE}/course-categories`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d: Category[]) => setCategories(Array.isArray(d) ? d : []))
+    courseCategoryService.list()
+      .then((d) => setCategories(Array.isArray(d) ? d : []))
       .catch(() => setCategories([]));
   }, [categoryRefreshKey]);
 
@@ -84,8 +72,6 @@ export default function CourseForm({ initialData, onSave, onCancel, loading, cat
     return () => { document.body.style.overflow = orig; };
   }, []);
 
-  const generateSlug = (title: string) =>
-    title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
 
   const sanitizeNested = (arr: any[]) => {
     if (!Array.isArray(arr)) return [];
@@ -246,7 +232,7 @@ export default function CourseForm({ initialData, onSave, onCancel, loading, cat
                   required
                   value={formData.title}
                   onChange={(e) =>
-                    setFormData((p) => ({ ...p, title: e.target.value, slug: generateSlug(e.target.value) }))
+                    setFormData((p) => ({ ...p, title: e.target.value, slug: slugify(e.target.value) }))
                   }
                   placeholder="e.g. Full Stack Development"
                   className={inp}

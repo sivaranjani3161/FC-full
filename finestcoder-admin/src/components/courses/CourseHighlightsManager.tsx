@@ -19,7 +19,7 @@ interface Props {
   onChange: (items: HighlightItem[]) => void;
 }
 
-const API_BASE = '/api/proxy';
+import { uploadService } from '@/services/upload.service';
 const MAX_HIGHLIGHTS = 3;
 
 const inp = 'w-full h-7 px-2.5 rounded-md border border-slate-200 bg-white text-[11.5px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#00B8C6] focus:bg-white transition-colors';
@@ -62,11 +62,7 @@ export default function CourseHighlightsManager({ items, onChange }: Props) {
   const handleIconUpload = async (idx: number, file: File) => {
     try {
       setUploadingIdx(idx);
-      const fd = new FormData();
-      fd.append('file', file);
-      const res = await fetch(`${API_BASE}/upload`, { method: 'POST', body: fd });
-      if (!res.ok) throw new Error();
-      const { url } = await res.json();
+      const { url } = await uploadService.uploadFile(file);
       updateHighlight(idx, { icon: url });
       toast.success('Icon uploaded');
     } catch {

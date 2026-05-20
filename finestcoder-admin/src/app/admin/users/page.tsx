@@ -7,45 +7,47 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
-
-const API_BASE = '/api/proxy';
-
-interface Role { id: number; name: string; code: string; }
-interface User { id: number; email: string; name: string | null; status: string; roleId: number; role: Role; }
+import { ApiError } from '@/lib/api-client';
+import { roleService } from '@/services/role.service';
+import { userService } from '@/services/user.service';
+import type { AdminUser } from '@/types/user';
+import type { DbRole } from '@/types/role';
 
 export default function UsersPage() {
-  const [users, setUsers]             = useState<User[]>([]);
-  const [roles, setRoles]             = useState<Role[]>([]);
+  const [users, setUsers]             = useState<AdminUser[]>([]);
+  const [roles, setRoles]             = useState<DbRole[]>([]);
   const [loading, setLoading]         = useState(true);
   const [showModal, setShowModal]     = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [submitting, setSubmitting]   = useState(false);
   const [formData, setFormData]       = useState({ email: '', name: '', roleId: '' });
   const [mounted, setMounted]         = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [deleting, setDeleting]         = useState(false);
 
   useEffect(() => { setMounted(true); fetchUsers(); fetchRoles(); }, []);
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${API_BASE}/users`);
-      if (res.ok) setUsers(await res.json());
-      else toast.error('Failed to load users');
-    } catch { toast.error('Failed to load users'); }
-    finally { setLoading(false); }
+      setUsers(await userService.list());
+    } catch {
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchRoles = async () => {
     try {
-      const res = await fetch(`${API_BASE}/roles`);
-      if (res.ok) setRoles(await res.json());
-    } catch { toast.error('Failed to load roles'); }
+      setRoles(await roleService.list());
+    } catch {
+      toast.error('Failed to load roles');
+    }
   };
 
   const resetForm = () => { setFormData({ email: '', name: '', roleId: '' }); setEditingUser(null); setShowModal(false); };
   const openCreate = () => { setEditingUser(null); setFormData({ email: '', name: '', roleId: '' }); setShowModal(true); };
-  const openEdit   = (user: User) => { setEditingUser(user); setFormData({ email: user.email, name: user.name || '', roleId: String(user.roleId) }); setShowModal(true); };
+  const openEdit   = (user: AdminUser) => { setEditingUser(user); setFormData({ email: user.email, name: user.name || '', roleId: String(user.roleId) }); setShowModal(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,23 +60,23 @@ export default function UsersPage() {
     try {
       setSubmitting(true);
       const isEdit = Boolean(editingUser);
-      const res = await fetch(
-        isEdit ? `${API_BASE}/users/${editingUser!.id}` : `${API_BASE}/users`,
-        { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
-      );
-      if (res.ok) {
-        await fetchUsers();
-        toast.success(isEdit ? 'User updated' : 'User created');
-        resetForm();
+      if (isEdit && editingUser) {
+        await userService.update(editingUser.id, payload);
+        toast.success('User updated');
       } else {
-        const err = await res.json();
-        toast.error(err.error || `Failed to ${isEdit ? 'update' : 'add'} user`);
+        await userService.create(payload);
+        toast.success('User created');
       }
-    } catch { toast.error('Something went wrong'); }
-    finally { setSubmitting(false); }
+      await fetchUsers();
+      resetForm();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Something went wrong');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDelete = (user: User) => {
+  const handleDelete = (user: AdminUser) => {
     setDeleteTarget(user);
   };
 
@@ -82,10 +84,12 @@ export default function UsersPage() {
     if (!deleteTarget) return;
     try {
       setDeleting(true);
-      const res = await fetch(`${API_BASE}/users/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) { setUsers(users.filter(u => u.id !== deleteTarget.id)); toast.success('User deleted'); }
-      else { const err = await res.json(); toast.error(err.error || 'Failed to delete user'); }
-    } catch { toast.error('An error occurred'); }
+      await userService.remove(deleteTarget.id);
+      setUsers(users.filter((u) => u.id !== deleteTarget.id));
+      toast.success('User deleted');
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'An error occurred');
+    }
     finally { setDeleting(false); setDeleteTarget(null); 
       
     }

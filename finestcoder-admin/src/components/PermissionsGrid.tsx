@@ -4,37 +4,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { Save, ShieldCheck, Plus, Trash2, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
-
-const API_BASE = '/api/proxy';
+import { ALL_OP_KEYS, MODULE_OPS, PERMISSION_MODULES } from '@/constants/permissions';
+import { roleService } from '@/services/role.service';
+import { ApiError } from '@/lib/api-client';
+import { slugifyRoleCode } from '@/utils/slug';
+import type { DbRole } from '@/types/role';
+import type { PermissionMap } from '@/types/permissions';
 
 const SIDEBAR_WIDTH = 262;
 const TOP_OFFSET    = 12;
 const RIGHT_OFFSET  = 12;
 const BOTTOM_OFFSET = 12;
 
-const MODULE_OPS: Record<string, Array<{ key: string; label: string }>> = {
-  courses:      [{ key: 'create', label: 'Create' }, { key: 'read', label: 'View' }, { key: 'update', label: 'Edit' }, { key: 'delete', label: 'Delete' }, { key: 'publish', label: 'Publish' }],
-  blogs:        [{ key: 'create', label: 'Create' }, { key: 'read', label: 'View' }, { key: 'update', label: 'Edit' }, { key: 'delete', label: 'Delete' }, { key: 'publish', label: 'Publish' }],
-  gallery:      [{ key: 'create', label: 'Create' }, { key: 'read', label: 'View' }, { key: 'update', label: 'Edit' }, { key: 'delete', label: 'Delete' }, { key: 'upload', label: 'Upload Images' }],
-  enquiries:    [{ key: 'read', label: 'View' }, { key: 'update', label: 'Update Status' }, { key: 'delete', label: 'Delete' }],
-  testimonials: [{ key: 'create', label: 'Create' }, { key: 'read', label: 'View' }, { key: 'update', label: 'Edit' }, { key: 'delete', label: 'Delete' }, { key: 'publish', label: 'Publish' }],
-};
+const MODULES = PERMISSION_MODULES;
 
-const MODULES = [
-  { key: 'courses',      label: 'Courses'      },
-  { key: 'blogs',        label: 'Blogs'        },
-  { key: 'gallery',      label: 'Gallery'      },
-  { key: 'enquiries',    label: 'Enquiries'    },
-  { key: 'testimonials', label: 'Testimonials' },
-];
-
-const ALL_OP_KEYS = ['create', 'read', 'update', 'delete', 'publish', 'upload', 'custom'];
-
-type PermMap = Record<string, Record<string, boolean>>;
-interface Role { id: number; name: string; code: string; }
-
-function emptyMap(): PermMap {
-  const m: PermMap = {};
+function emptyMap(): PermissionMap {
+  const m: PermissionMap = {};
   for (const mod of MODULES) {
     m[mod.key] = {};
     for (const k of ALL_OP_KEYS) m[mod.key][k] = false;
@@ -43,9 +28,9 @@ function emptyMap(): PermMap {
 }
 
 export default function PermissionsGrid() {
-  const [roles, setRoles]                   = useState<Role[]>([]);
+  const [roles, setRoles]                   = useState<DbRole[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const [permissions, setPermissions]       = useState<PermMap | null>(null);
+  const [permissions, setPermissions]       = useState<PermissionMap | null>(null);
   const [loadingRoles, setLoadingRoles]     = useState(true);
   const [loadingPerms, setLoadingPerms]     = useState(false);
   const [saving, setSaving]                 = useState(false);
@@ -54,20 +39,15 @@ export default function PermissionsGrid() {
   const [newRoleName, setNewRoleName]       = useState('');
   const [showModal, setShowModal]           = useState(false);
   const [mounted, setMounted]               = useState(false);
-  const [deleteTarget, setDeleteTarget]     = useState<Role | null>(null);
+  const [deleteTarget, setDeleteTarget]     = useState<DbRole | null>(null);
 
   useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
 
   const selectedRole = useMemo(() => roles.find(r => r.id === selectedRoleId) || null, [roles, selectedRoleId]);
   const isAdmin = selectedRole?.code === 'admin';
 
-  const slugifyRoleCode = (name: string) =>
-    name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-
   const fetchRoles = async () => {
-    const res = await fetch(`${API_BASE}/roles`);
-    if (!res.ok) throw new Error('Failed to load roles');
-    const data: Role[] = await res.json();
+    const data = await roleService.list();
     setRoles(data);
     return data;
   };
@@ -88,9 +68,7 @@ export default function PermissionsGrid() {
     (async () => {
       try {
         setLoadingPerms(true);
-        const res = await fetch(`${API_BASE}/permissions?roleId=${selectedRoleId}`);
-        if (!res.ok) throw new Error();
-        const data = await res.json();
+        const data = await roleService.getPermissions(selectedRoleId);
         const norm = emptyMap();
         for (const mod of MODULES) for (const k of ALL_OP_KEYS) norm[mod.key][k] = Boolean(data?.[mod.key]?.[k]);
         setPermissions(norm);
@@ -113,22 +91,17 @@ export default function PermissionsGrid() {
     if (selectedRoleId == null || !permissions || isAdmin) return;
     try {
       setSaving(true);
-      const res = await fetch(`${API_BASE}/permissions`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roleId: selectedRoleId, permissions }),
-      });
-      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e?.error || 'Failed'); }
+      await roleService.savePermissions(selectedRoleId, permissions);
       toast.success('Permissions saved');
-      const refresh = await fetch(`${API_BASE}/permissions?roleId=${selectedRoleId}`);
-      if (refresh.ok) {
-        const data = await refresh.json();
-        const norm = emptyMap();
-        for (const mod of MODULES) for (const k of ALL_OP_KEYS) norm[mod.key][k] = Boolean(data?.[mod.key]?.[k]);
-        setPermissions(norm);
-      }
-    } catch (e: any) { toast.error(e?.message || 'Save failed'); }
-    finally { setSaving(false); }
+      const data = await roleService.getPermissions(selectedRoleId);
+      const norm = emptyMap();
+      for (const mod of MODULES) for (const k of ALL_OP_KEYS) norm[mod.key][k] = Boolean(data?.[mod.key]?.[k]);
+      setPermissions(norm);
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCreateRole = async () => {
@@ -138,22 +111,19 @@ export default function PermissionsGrid() {
     if (!code) { toast.error('Enter a valid role name'); return; }
     try {
       setCreatingRole(true);
-      const res = await fetch(`${API_BASE}/roles`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, code }),
-      });
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error || 'Failed to create role'); }
-      const created = (await res.json()) as Role;
+      const created = await roleService.create({ name, code });
       await fetchRoles();
       setSelectedRoleId(created.id);
       setNewRoleName('');
       toast.success('Role added');
-    } catch (e: any) { toast.error(e?.message || 'Failed to create role'); }
-    finally { setCreatingRole(false); }
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to create role');
+    } finally {
+      setCreatingRole(false);
+    }
   };
 
-  const handleDeleteRole = (role: Role) => {
+  const handleDeleteRole = (role: DbRole) => {
     if (!role || role.code === 'admin') return;
     setDeleteTarget(role);
   };
@@ -162,15 +132,15 @@ export default function PermissionsGrid() {
     if (!deleteTarget) return;
     try {
       setDeletingRole(true);
-      const res = await fetch(`${API_BASE}/roles/${deleteTarget.id}`, { method: 'DELETE' });
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error || 'Failed to delete role'); }
+      await roleService.remove(deleteTarget.id);
       const updated = await fetchRoles();
       const fallbackRoleId = updated[0]?.id ?? null;
       setSelectedRoleId(fallbackRoleId);
       setPermissions(fallbackRoleId ? null : emptyMap());
       toast.success('Role deleted');
-    } catch (e: any) { toast.error(e?.message || 'Failed to delete role'); }
-    finally {
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : 'Failed to delete role');
+    } finally {
       setDeletingRole(false);
       setDeleteTarget(null);
     }

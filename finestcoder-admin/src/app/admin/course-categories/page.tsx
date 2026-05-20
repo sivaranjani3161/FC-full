@@ -1,45 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Tag, Plus, Pencil, Trash2, X, Save, ChevronUp, ChevronDown } from 'lucide-react';
+import { Tag, Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
-const API = '/api/proxy';
-
-const inp = 'w-full h-9 px-3 rounded-lg border border-slate-200 bg-white text-[13px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-[#00B8C6] focus:ring-2 focus:ring-[#00B8C6]/10 transition-all';
-const lbl = 'block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1';
-
-
-
-const makeSlug = (name: string) =>
-  name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-  description: string | null;
-  sortOrder: number;
-  createdAt: string;
-}
-
-interface FormState {
-  name: string;
-  slug: string;
-  description: string;
-  sortOrder: number;
-}
-
-const empty: FormState = { name: '', slug: '', description: '', sortOrder: 0 };
+import { INPUT_CLASS, LABEL_CLASS } from '@/constants/form';
+import { courseCategoryService } from '@/services/courseCategory.service';
+import { slugFromName } from '@/utils/slug';
+import type { CourseCategory, CourseCategoryForm } from '@/types/category';
+import { emptyCategoryForm } from '@/types/category';
 
 export default function CourseCategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CourseCategory[]>([]);
   const [loading, setLoading]       = useState(true);
   const [formOpen, setFormOpen]     = useState(false);
-  const [editing, setEditing]       = useState<Category | null>(null);
-  const [form, setForm]             = useState<FormState>(empty);
+  const [editing, setEditing]       = useState<CourseCategory | null>(null);
+  const [form, setForm]             = useState<CourseCategoryForm>(emptyCategoryForm);
   const [saving, setSaving]         = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CourseCategory | null>(null);
   const [deleting, setDeleting]     = useState(false);
 
   useEffect(() => { fetchCategories(); }, []);
@@ -47,47 +24,46 @@ export default function CourseCategoriesPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API}/course-categories`);
-      if (res.ok) setCategories(await res.json());
+      setCategories(await courseCategoryService.list());
     } catch { toast.error('Failed to load categories'); }
     finally { setLoading(false); }
   };
 
   const openAdd = () => {
     setEditing(null);
-    setForm(empty);
+    setForm(emptyCategoryForm);
     setFormOpen(true);
   };
 
-  const openEdit = (cat: Category) => {
+  const openEdit = (cat: CourseCategory) => {
     setEditing(cat);
     setForm({ name: cat.name, slug: cat.slug, description: cat.description || '', sortOrder: cat.sortOrder });
     setFormOpen(true);
   };
 
-  const closeForm = () => { setFormOpen(false); setEditing(null); setForm(empty); };
+  const closeForm = () => { setFormOpen(false); setEditing(null); setForm(emptyCategoryForm); };
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required'); return; }
     try {
       setSaving(true);
-      const payload = { ...form, slug: form.slug || makeSlug(form.name) };
-      const url    = editing ? `${API}/course-categories/${editing.id}` : `${API}/course-categories`;
-      const method = editing ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        toast.success(editing ? 'Category updated' : 'Category created');
-        closeForm();
-        fetchCategories();
+      const payload = {
+        ...form,
+        slug: form.slug || slugFromName(form.name),
+        description: form.description || null,
+      };
+      if (editing) {
+        await courseCategoryService.update(editing.id, payload);
+        toast.success('Category updated');
       } else {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.error || 'Failed to save category');
+        await courseCategoryService.create(payload);
+        toast.success('Category created');
       }
-    } catch { toast.error('An error occurred'); }
+      closeForm();
+      fetchCategories();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'An error occurred');
+    }
     finally { setSaving(false); }
   };
 
@@ -95,10 +71,12 @@ export default function CourseCategoriesPage() {
     if (!deleteTarget) return;
     try {
       setDeleting(true);
-      const res = await fetch(`${API}/course-categories/${deleteTarget.id}`, { method: 'DELETE' });
-      if (res.ok) { toast.success('Category deleted'); fetchCategories(); }
-      else toast.error('Failed to delete category');
-    } catch { toast.error('An error occurred'); }
+      await courseCategoryService.remove(deleteTarget.id);
+      toast.success('Category deleted');
+      fetchCategories();
+    } catch {
+      toast.error('Failed to delete category');
+    }
     finally { setDeleting(false); setDeleteTarget(null); }
   };
 
@@ -201,28 +179,28 @@ export default function CourseCategoriesPage() {
             {/* Body */}
             <div className="px-5 py-5 space-y-4">
               <div>
-                <label className={lbl}>Name <span className="text-rose-400">*</span></label>
+                <label className={LABEL_CLASS}>Name <span className="text-rose-400">*</span></label>
                 <input
                   type="text"
                   value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value, slug: makeSlug(e.target.value) }))}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value, slug: slugFromName(e.target.value) }))}
                   placeholder="e.g. Campus-to-Corporate Programs"
-                  className={inp}
+                  className={INPUT_CLASS}
                   autoFocus
                 />
               </div>
               <div>
-                <label className={lbl}>Slug</label>
+                <label className={LABEL_CLASS}>Slug</label>
                 <input
                   type="text"
                   value={form.slug}
                   onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
                   placeholder="campus-to-corporate-programs"
-                  className={`${inp} font-mono text-[12px]`}
+                  className={`${INPUT_CLASS} font-mono text-[12px]`}
                 />
               </div>
               <div>
-                <label className={lbl}>Description</label>
+                <label className={LABEL_CLASS}>Description</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
@@ -232,13 +210,13 @@ export default function CourseCategoriesPage() {
                 />
               </div>
               <div>
-                <label className={lbl}>Sort Order</label>
+                <label className={LABEL_CLASS}>Sort Order</label>
                 <input
                   type="number"
                   min={0}
                   value={form.sortOrder}
                   onChange={(e) => setForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
-                  className={inp}
+                  className={INPUT_CLASS}
                 />
               </div>
 
