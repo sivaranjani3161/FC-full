@@ -1,0 +1,11 @@
+{
+  "heroImage": "/abouthero.png",
+  "title": {
+    "normal": "Introduction About",
+    "highlight": "Our Institute"
+  },
+"description": [
+    { "text": "At " },
+    { "text": "Finest Coder", "bold": true },
+    { "text": ", we've learned that building strong teams requires more than just hiring talent. It demands nurturing that talent to reach its full potential. Leveraging over a decade of experience in the industry, we created FinestCoder to transform promising coders into industry ready professionals. Our unique approach focuses on practical, hands-on training that directly addresses the skills and challenges coders face in the real world. Our goal is to refine and elevate their abilities, ensuring they are ready to make meaningful contributions in a fast paced tech environment. We are proud of our 90% success rate, turning coders into highly capable professionals within 100 days." }
+  ]}

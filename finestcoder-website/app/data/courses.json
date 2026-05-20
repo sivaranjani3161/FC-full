@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Full Stack Web Development",
+    "desc": "Master front-end and back-end development.",
+    "image": "/course1.png",
+    "tags": ["Development", "New"]
+  },
+  {
+    "title": "Testing Automation - CI & CD",
+    "desc": "Master Testing Automation - CI & CD in just 2 months.",
+    "image": "/course2.png",
+    "tags": ["QA Engineering", "Trending"]
+  },
+  {
+    "title": "Cloud Computing & DevOps Engineering",
+    "desc": "Master Cloud Computing & DevOps Engineering in 5 months.",
+    "image": "/course3.png",
+    "tags": ["DevOps", "Popular"]
+  }
+]

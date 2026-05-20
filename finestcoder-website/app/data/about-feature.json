@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "icon": "/mission.png",
+      "title": "Our Mission",
+      "desc": "Empowering future coders with quality training, hands-on learning, inspiring them to excel in the evolving tech world."
+    },
+    {
+      "icon": "/vision.png",
+      "title": "vision",
+      "desc": "Leading in coding education, fostering innovation and equipping developers with skills to thrive in the tech industry."
+    },
+    {
+      "icon": "/values.png",
+      "title": "values",
+      "desc": "We foster innovation, embrace inclusivity, and empower students with skills to thrive in a changing tech world."
+    }
+  ]
+}
